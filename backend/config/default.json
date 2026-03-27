@@ -1,0 +1,6 @@
+{
+    "mongo_url": "mongodb://127.0.0.1:27017/baseProjet",
+    "jwtSecret": "jwtSecret",
+    "tokenExpire": "2592000",
+    "STRIPE_SECRET_KEY":"your_stripe_secret_key_here"
+}
