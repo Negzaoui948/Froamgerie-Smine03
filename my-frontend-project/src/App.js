@@ -9,12 +9,15 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "./pages/CheckoutForm";
 
-const stripePromise = loadStripe("pk_test_51T6nrcJSg1U5m1fjkuEo7iP9z2lpsMEmRHf2OOc4vbZqoxriXSqXzbvnm2HLeAVnAOpcmwPXBnIkJzfUinmBJEM600z7IlFg8h ");
+const stripePromise = loadStripe(
+  process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || "pk_test_placeholder"
+);
 
 const App = () => {
   return (
     <Routes>
-      <Route path="/" element={<Register />} />
+      <Route path="/" element={<Navigate to="/client/home" replace />} />
+      <Route path="/register" element={<Register />} />
       <Route path="/Login" element={<Login />} />
       <Route path="/login" element={<Navigate to="/Login" replace />} />
       <Route path="/client" element={<Navigate to="/client/home" replace />} />

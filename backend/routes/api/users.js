@@ -8,6 +8,8 @@ const SUPER_ADMIN_EMAILS = [
     "oussama.negzaoui24@gmail.com",
     "abir.issaoui@gmail.com"
 ];
+const JWT_SECRET = process.env.JWT_SECRET || config.get("jwtSecret");
+const TOKEN_EXPIRE = process.env.TOKEN_EXPIRE || config.get("tokenExpire");
 // @route POST api/users
 // @desc Register new user
 // @access Public
@@ -26,7 +28,7 @@ router.post("/register", async (req, res) => {
         }
 
         try {
-            const decoded = jwt.verify(token, config.get("jwtSecret"));
+            const decoded = jwt.verify(token, JWT_SECRET);
             const currentUser = await User.findById(decoded.id);
 
             if (!currentUser || !SUPER_ADMIN_EMAILS.includes(currentUser.email)) {
@@ -85,7 +87,7 @@ router.post("/register", async (req, res) => {
                         .then((user) => {
                             // Generate JWT token
                             jwt.sign({ id: user.id },
-                                config.get("jwtSecret"), { expiresIn: config.get("tokenExpire") },
+                                JWT_SECRET, { expiresIn: TOKEN_EXPIRE },
                                 (err, token) => {
                                     if (err) {
                                         return res
@@ -135,13 +137,10 @@ router.post("/login", async (req, res) => {
     }
 
     // Générer le token
-    const JWT_SECRET = config.get("jwtSecret");
-    const tokenExpire = config.get("tokenExpire");
-
     const token = jwt.sign(
       { id: user._id, name: user.username },
       JWT_SECRET,
-      { expiresIn: tokenExpire }
+      { expiresIn: TOKEN_EXPIRE }
     );
 
     res.json({

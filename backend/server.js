@@ -1,3 +1,5 @@
+require("dotenv").config({ path: ".env" });
+require("dotenv").config({ path: ".env.local" });
 const express = require("express");
 const mongoose = require("mongoose");
 const config = require("config");
@@ -7,6 +9,7 @@ const products = require("./routes/api/Products");
 const categories = require("./routes/api/Categories");
 const createPaymentIntent = require("./routes/api/create-payment-intent");
 const app = express();
+let isMongoConnected = false;
 
 // Pour analyser le corps des requêtes HTTP (JSON)
 app.use(express.json());
@@ -18,13 +21,20 @@ app.use(cors());
 app.use('/uploads', express.static('uploads'));
 
 // Connexion à MongoDB
-const mongo_url = config.get("mongo_url");
+const mongo_url = process.env.MONGO_URL || config.get("mongo_url");
 mongoose.set("strictQuery", true);
 
-mongoose
-    .connect(mongo_url)
-    .then(() => console.log("MongoDB connected..."))
-    .catch((err) => console.log(err));
+const connectToDatabase = async () => {
+    if (isMongoConnected) {
+        return;
+    }
+
+    await mongoose.connect(mongo_url);
+    isMongoConnected = true;
+    console.log("MongoDB connected...");
+};
+
+connectToDatabase().catch((err) => console.log(err));
 
 // Port du serveur
 app.use("/users", users);
@@ -34,6 +44,10 @@ app.use("/stripe", createPaymentIntent);
 const port = process.env.PORT || 3015;
 
 // Démarrer le serveur
-app.listen(port, () =>
-    console.log(`Server running on port ${port}`)
-);
+if (process.env.NODE_ENV !== "production") {
+    app.listen(port, () =>
+        console.log(`Server running on port ${port}`)
+    );
+}
+
+module.exports = app;

@@ -17,7 +17,8 @@ import {
   Grid
 } from "@mui/material";
 import { Delete } from "@mui/icons-material";
-import { API_BASE_URL, buildApiUrl } from "../config/api";
+import { buildApiUrl } from "../config/api";
+import { resolveMediaUrl } from "../config/media";
 
 const API_URL = buildApiUrl("/categories");
 
@@ -63,18 +64,32 @@ const CategoryManager = () => {
       const formData = new FormData();
       formData.append('nom', form.nom.trim());
       formData.append('description', form.description.trim());
+      
+      console.log("[CategoryManager] Ajout:", {
+        "nom": form.nom,
+        "description": form.description,
+        "image exists": !!form.image,
+        "image name": form.image?.name,
+        "image size": form.image?.size
+      });
+      
       if (form.image) {
         formData.append('image', form.image);
+        console.log("[CategoryManager] Image ajoutée au FormData");
       }
 
       const url = editMode ? `${API_URL}/update/${editingCategory._id}` : `${API_URL}/add`;
       const method = editMode ? "PUT" : "POST";
 
+      console.log(`[CategoryManager] Envoi ${method} vers ${url}`);
+      
       const res = await fetch(url, {
         method: method,
         body: formData,
       });
+      
       const data = await res.json();
+      console.log("[CategoryManager] Réponse serveur:", data);
 
       if (data.status === "ok") {
         setMessage({ text: editMode ? "Catégorie modifiée avec succès" : "Catégorie créée avec succès", type: "success" });
@@ -86,8 +101,8 @@ const CategoryManager = () => {
         setMessage({ text: data.msg || "Erreur lors de l'opération", type: "error" });
       }
     } catch (error) {
-      console.error("Erreur :", error);
-      setMessage({ text: "Erreur réseau lors de l'opération", type: "error" });
+      console.error("❌ Erreur fetch:", error);
+      setMessage({ text: "Erreur réseau lors de l'opération: " + error.message, type: "error" });
     }
   };
 
@@ -185,7 +200,7 @@ const CategoryManager = () => {
             {editMode && editingCategory?.image && !form.image && (
               <Box sx={{ mt: 1 }}>
                 <Typography variant="caption">Image actuelle:</Typography>
-                <img src={`${API_BASE_URL}${editingCategory.image}`} alt="Current" style={{ maxWidth: '100px', maxHeight: '100px' }} />
+                <img src={resolveMediaUrl(editingCategory.image)} alt="Current" style={{ maxWidth: '100px', maxHeight: '100px' }} />
               </Box>
             )}
           </Grid>
@@ -215,6 +230,7 @@ const CategoryManager = () => {
               <TableRow>
                 <TableCell>Nom</TableCell>
                 <TableCell>Description</TableCell>
+                <TableCell>Image</TableCell>
                 <TableCell>Actions</TableCell>
               </TableRow>
             </TableHead>
@@ -223,6 +239,14 @@ const CategoryManager = () => {
                 <TableRow key={cat._id}>
                   <TableCell>{cat.nom}</TableCell>
                   <TableCell>{cat.description || "-"}</TableCell>
+                  <TableCell>
+                    <img
+                      src={resolveMediaUrl(cat.image)}
+                      alt={cat.nom}
+                      style={{ width: 60, height: 60, objectFit: "cover", borderRadius: 6 }}
+                      onError={(e) => { e.currentTarget.src = "https://via.placeholder.com/60"; }}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Button variant="outlined" size="small" onClick={() => handleEdit(cat)} sx={{ mr: 1 }}>
                       Modifier

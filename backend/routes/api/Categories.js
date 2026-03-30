@@ -1,95 +1,170 @@
-const router = require('express').Router();
-const Categorie = require('../../models/Categorie');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const router = require("express").Router();
+const Categorie = require("../../models/Categorie");
+const multer = require("multer");
+const { uploadBuffer, destroyImage } = require("../../utils/cloudinary");
 
-// Créer le dossier uploads s'il n'existe pas
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Dossier uploads créé pour catégories');
-}
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  }
-});
-
-const upload = multer({ storage: storage });
-
-// GET all categories
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const categories = await Categorie.find();
-    res.status(200).json({ status: 'ok', categories });
+    res.status(200).json({ status: "ok", categories });
   } catch (err) {
-    console.error('Erreur categories:', err);
-    res.status(500).json({ status: 'error', msg: 'Erreur serveur' });
+    console.error("Erreur categories:", err);
+    res.status(500).json({ status: "error", msg: "Erreur serveur" });
   }
 });
 
-// POST create category (image possible)
-router.post('/add', upload.single('image'), async (req, res) => {
+router.post("/add", upload.single("image"), async (req, res) => {
   const { nom, description } = req.body;
-  if (!nom) return res.status(400).json({ status: 'notok', msg: 'Nom de catégorie requis' });
 
-  const imagePath = req.file ? `/uploads/${req.file.filename}` : undefined;
-  const categoryData = { nom, description };
-  if (imagePath) categoryData.image = imagePath;
+  if (!nom) {
+    return res.status(400).json({ status: "notok", msg: "Nom de categorie requis" });
+  }
 
   try {
+    const categoryData = { nom, description };
+
+    console.log("[POST /categories/add]", {
+      "nom": nom,
+      "description": description,
+      "req.file exists": !!req.file,
+      "req.file.originalname": req.file?.originalname,
+      "req.file.size": req.file?.size,
+      "CLOUDINARY_CLOUD_NAME": process.env.CLOUDINARY_CLOUD_NAME ? "✓" : "✗",
+      "CLOUDINARY_API_KEY": process.env.CLOUDINARY_API_KEY ? "✓" : "✗",
+      "CLOUDINARY_API_SECRET": process.env.CLOUDINARY_API_SECRET ? "✓" : "✗"
+    });
+
+    const cloudinaryReady =
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET;
+
+    if (req.file) {
+      if (!cloudinaryReady) {
+        console.warn("⚠️ Cloudinary non configuré, catégorie créée sans image");
+      } else {
+        try {
+          console.log("[Cloudinary] Démarrage upload...");
+          const uploadedImage = await uploadBuffer(req.file.buffer, "fromagerie-smine/categories");
+          console.log("[Cloudinary] Réponse reçue:", {
+            "has secure_url": !!uploadedImage?.secure_url,
+            "secure_url": uploadedImage?.secure_url,
+            "keys": Object.keys(uploadedImage || {})
+          });
+          
+          if (!uploadedImage || !uploadedImage.secure_url) {
+            throw new Error("Réponse Cloudinary invalide: " + JSON.stringify(uploadedImage));
+          }
+          categoryData.image = uploadedImage.secure_url;
+          console.log("[Cloudinary] ✓ Image enregistrée:", categoryData.image);
+        } catch (uploadError) {
+          console.error("❌ Erreur upload image categorie:", uploadError.message);
+          console.error("Stack:", uploadError.stack);
+          return res.status(502).json({ status: "error", msg: "Erreur upload image: " + uploadError.message });
+        }
+      }
+    } else {
+      console.log("ℹ️ Pas de fichier image reçu");
+    }
+
     const category = new Categorie(categoryData);
     await category.save();
-    res.status(201).json({ status: 'ok', categorie: category });
+
+    res.status(201).json({ status: "ok", categorie: category });
   } catch (err) {
-    console.error('Erreur création catégorie:', err);
+    console.error("❌ Erreur creation categorie:", err);
     if (err.code === 11000) {
-      return res.status(400).json({ status: 'notok', msg: 'Catégorie déjà existante' });
+      return res.status(400).json({ status: "notok", msg: "Categorie deja existante" });
     }
-    res.status(500).json({ status: 'error', msg: 'Erreur serveur' });
+
+    res.status(500).json({ status: "error", msg: "Erreur serveur", error: err.message });
   }
 });
 
-// PUT update category
-router.put('/update/:id', upload.single('image'), async (req, res) => {
+router.put("/update/:id", upload.single("image"), async (req, res) => {
   const { id } = req.params;
   const { nom, description } = req.body;
 
-  if (!nom) return res.status(400).json({ status: 'notok', msg: 'Nom de catégorie requis' });
+  if (!nom) {
+    return res.status(400).json({ status: "notok", msg: "Nom de categorie requis" });
+  }
 
   try {
     const category = await Categorie.findById(id);
+
     if (!category) {
-      return res.status(404).json({ status: 'notok', msg: 'Catégorie non trouvée' });
+      return res.status(404).json({ status: "notok", msg: "Categorie non trouvee" });
     }
 
-    // Si une nouvelle image est fournie, supprimer l'ancienne
+    const cloudinaryReady =
+      process.env.CLOUDINARY_CLOUD_NAME &&
+      process.env.CLOUDINARY_API_KEY &&
+      process.env.CLOUDINARY_API_SECRET;
+
     if (req.file) {
-      if (category.image) {
-        const oldImagePath = path.join(__dirname, '../../', category.image);
-        if (fs.existsSync(oldImagePath)) {
-          fs.unlinkSync(oldImagePath);
+      if (!cloudinaryReady) {
+        console.warn("⚠️ Cloudinary non configuré, catégorie mise à jour sans nouvelle image");
+      } else {
+        if (category.image && !category.image.includes("placeholder")) {
+          console.log("[Cloudinary] Suppression image précédente...");
+          await destroyImage(category.image);
+        }
+
+        try {
+          console.log("[Cloudinary] Démarrage upload...");
+          const uploadedImage = await uploadBuffer(req.file.buffer, "fromagerie-smine/categories");
+          console.log("[Cloudinary] Réponse reçue:", {
+            "has secure_url": !!uploadedImage?.secure_url,
+            "secure_url": uploadedImage?.secure_url,
+            "keys": Object.keys(uploadedImage || {})
+          });
+          
+          if (!uploadedImage || !uploadedImage.secure_url) {
+            throw new Error("Réponse Cloudinary invalide: " + JSON.stringify(uploadedImage));
+          }
+          category.image = uploadedImage.secure_url;
+          console.log("[Cloudinary] ✓ Image enregistrée:", category.image);
+        } catch (uploadError) {
+          console.error("❌ Erreur upload image categorie:", uploadError.message);
+          console.error("Stack:", uploadError.stack);
+          return res.status(502).json({ status: "error", msg: "Erreur upload image: " + uploadError.message });
         }
       }
-      category.image = `/uploads/${req.file.filename}`;
     }
 
     category.nom = nom;
     category.description = description;
 
     await category.save();
-    res.status(200).json({ status: 'ok', categorie: category });
+    res.status(200).json({ status: "ok", categorie: category });
   } catch (err) {
-    console.error('Erreur mise à jour catégorie:', err);
+    console.error("Erreur mise a jour categorie:", err);
     if (err.code === 11000) {
-      return res.status(400).json({ status: 'notok', msg: 'Catégorie déjà existante' });
+      return res.status(400).json({ status: "notok", msg: "Categorie deja existante" });
     }
-    res.status(500).json({ status: 'error', msg: 'Erreur serveur' });
+
+    res.status(500).json({ status: "error", msg: "Erreur serveur" });
+  }
+});
+
+router.delete("/delete/:id", async (req, res) => {
+  try {
+    const category = await Categorie.findByIdAndDelete(req.params.id);
+
+    if (!category) {
+      return res.status(404).json({ status: "notok", msg: "Categorie non trouvee" });
+    }
+
+    if (category.image) {
+      await destroyImage(category.image);
+    }
+
+    res.status(200).json({ status: "ok", msg: "Categorie supprimee avec succes" });
+  } catch (err) {
+    console.error("Erreur suppression categorie:", err);
+    res.status(500).json({ status: "error", msg: "Erreur serveur" });
   }
 });
 

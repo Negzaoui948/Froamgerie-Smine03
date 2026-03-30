@@ -100,7 +100,7 @@ const Login = () => {
                     </form>
 
                     <p className="auth-switch">
-                        Pas encore de compte ? <Link to="/">Creer un compte</Link>
+                        Pas encore de compte ? <Link to="/register">Creer un compte</Link>
                     </p>
                 </section>
             </div>

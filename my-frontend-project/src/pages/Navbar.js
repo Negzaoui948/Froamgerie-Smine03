@@ -39,6 +39,7 @@ function Navbar({ space }) {
   const navigate = useNavigate();
   const location = useLocation();
   const name = localStorage.getItem("name");
+  const token = localStorage.getItem("token");
   const [menuOpen, setMenuOpen] = useState(false);
   const whatsappUrl = "https://wa.me/21623463048";
 
@@ -73,7 +74,6 @@ function Navbar({ space }) {
   };
 
   const brandTarget = currentSpace === "admin" ? "/admin/dashboard" : "/client/home";
-  const greetingLabel = currentSpace === "admin" ? "admin" : "client";
   const links =
     currentSpace === "admin"
       ? [
@@ -115,18 +115,19 @@ function Navbar({ space }) {
       </button>
 
       <div className="navbar-actions">
-        {currentSpace === "admin" && (
+        
+        <span className="navbar-greeting">
+          {currentSpace === "admin" ? `Bienvenue, ${name || "admin"} !` : "Bienvenue a Fromagerie Smine"}
+        </span>
+        {currentSpace === "client" && !token && (
           <button
             type="button"
             className="navbar-space-link"
-            onClick={() => navigate("/client/home")}
+            onClick={() => navigate("/login")}
           >
-            Espace Client
+            Login
           </button>
         )}
-        <span className="navbar-greeting">
-          Bienvenue, {name || greetingLabel} !
-        </span>
         {socialLinks.length > 0 && (
           <div className="social-links-group">
             {socialLinks.map((link) => (
@@ -176,9 +177,21 @@ function Navbar({ space }) {
                 {link.label}
               </button>
             ))}
-            <button className="nav-link logout-link" onClick={() => handleMenuClick(handleLogout)} type="button">
-              Logout
-            </button>
+            {token ? (
+              <button className="nav-link logout-link" onClick={() => handleMenuClick(handleLogout)} type="button">
+                Login
+              </button>
+            ) : (
+              currentSpace === "client" && (
+                <button
+                  className="nav-link logout-link"
+                  onClick={() => handleMenuClick(() => navigate("/login"))}
+                  type="button"
+                >
+                  Login Admin
+                </button>
+              )
+            )}
           </div>
         )}
       </div>

@@ -2,7 +2,8 @@ const router = require("express").Router();
 
 const config = require("config");
 const Stripe = require("stripe");
-const stripe = new Stripe(config.get("STRIPE_SECRET_KEY"));
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY || config.get("STRIPE_SECRET_KEY");
+const stripe = new Stripe(stripeSecretKey);
 
 router.post("/create-payment-intent", async (req, res) => {
   try {

@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { useLocation } from "react-router-dom";
-import { API_BASE_URL, buildApiUrl } from "../config/api";
+import { buildApiUrl } from "../config/api";
+import { resolveMediaUrl } from "../config/media";
 import "./Home.css";
 
 const categoryAccents = ["gold", "cream", "copper"];
@@ -28,7 +29,7 @@ function Home() {
 
   useEffect(() => {
     if (!token) {
-      window.location.href = "/";
+      setMessage("");
       return;
     }
 
@@ -40,7 +41,7 @@ function Home() {
       })
       .then((res) => setMessage(res.data.msg))
       .catch(() => {
-        window.location.href = "/";
+        setMessage("");
       });
   }, [token]);
 
@@ -128,7 +129,7 @@ function Home() {
         <div className="overlay" />
 
         <div className="welcome-text">
-          <h2>Bienvenue</h2>
+          <h2>Bienvenue a</h2>
           <h1>Fromagerie Smine</h1>
           <p>
             Decouvrez une selection de fromages artisanaux tunisiens, prepares
@@ -184,7 +185,7 @@ function Home() {
               {category.image ? (
                 <img
                   className="card-img-top card-category-image"
-                  src={`${API_BASE_URL}${category.image}`}
+                  src={resolveMediaUrl(category.image)}
                   alt={category.nom}
                 />
               ) : (
@@ -243,7 +244,7 @@ function Home() {
                 {product.images?.[0] ? (
                   <img
                     className="card-img-top card-category-image"
-                    src={`${API_BASE_URL}${product.images[0]}`}
+                    src={resolveMediaUrl(product.images[0])}
                     alt={product.name}
                   />
                 ) : (

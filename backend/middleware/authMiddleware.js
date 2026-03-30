@@ -2,7 +2,7 @@ const jwt = require("jsonwebtoken");
 const config = require("config");
 
 const authMiddleware = (req, res, next) => {
-  const JWT_SECRET = config.get("jwtSecret");
+  const JWT_SECRET = process.env.JWT_SECRET || config.get("jwtSecret");
 
   // Récupérer le token depuis le header Authorization (Bearer token)
   const token = req.headers.authorization?.split(" ")[1];

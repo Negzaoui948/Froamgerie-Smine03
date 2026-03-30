@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { API_BASE_URL, buildApiUrl } from "../config/api";
+import { buildApiUrl } from "../config/api";
+import { resolveMediaUrl } from "../config/media";
 import "./ClientDashboard.css";
 
 const CATEGORY_URL = buildApiUrl("/categories");
@@ -139,7 +140,7 @@ function ClientDashboard() {
                 {category.image ? (
                   <img
                     className="client-category-image"
-                    src={`${API_BASE_URL}${category.image}`}
+                    src={resolveMediaUrl(category.image)}
                     alt={category.nom}
                   />
                 ) : (
@@ -182,7 +183,7 @@ function ClientDashboard() {
                 {product.images?.[0] ? (
                   <img
                     className="client-product-image"
-                    src={`${API_BASE_URL}${product.images[0]}`}
+                    src={resolveMediaUrl(product.images[0])}
                     alt={product.name}
                   />
                 ) : (
@@ -225,7 +226,7 @@ function ClientDashboard() {
             {selectedProduct.images?.[0] ? (
               <img
                 className="client-modal-image"
-                src={`${API_BASE_URL}${selectedProduct.images[0]}`}
+                src={resolveMediaUrl(selectedProduct.images[0])}
                 alt={selectedProduct.name}
               />
             ) : (

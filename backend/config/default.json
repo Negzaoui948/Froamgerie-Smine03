@@ -1,5 +1,5 @@
 {
-    "mongo_url": "mongodb://127.0.0.1:27017/baseProjet",
+    "mongo_url": "mongodb+srv://oussamaNegzaoui:oussamaNegzaoui@cluster0.mhe6vf.mongodb.net/fromagerie_db?appName=Cluster0",
     "jwtSecret": "jwtSecret",
     "tokenExpire": "2592000",
     "STRIPE_SECRET_KEY":"your_stripe_secret_key_here"

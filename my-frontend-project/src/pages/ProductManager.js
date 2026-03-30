@@ -23,7 +23,8 @@ import {
   CardMedia
 } from "@mui/material";
 import { Edit, Delete, CloudUpload } from "@mui/icons-material";
-import { API_BASE_URL, buildApiUrl } from "../config/api";
+import { buildApiUrl } from "../config/api";
+import { resolveMediaUrl } from "../config/media";
 
 const API_URL = buildApiUrl("/produits");
 
@@ -415,8 +416,9 @@ const ProductManager = () => {
                         {product.images.slice(0, 3).map((image, index) => (
                           <img
                             key={index}
-                            src={`${API_BASE_URL}${image}`}
+                            src={resolveMediaUrl(image)}
                             alt={`Produit ${index + 1}`}
+                            onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/50'; }}
                             style={{ width: 50, height: 50, objectFit: 'cover', borderRadius: 4 }}
                           />
                         ))}
@@ -575,8 +577,9 @@ const ProductManager = () => {
                       <CardMedia
                         component="img"
                         height="100"
-                        image={`${API_BASE_URL}${image}`}
+                        image={resolveMediaUrl(image)}
                         alt={`Image actuelle ${index + 1}`}
+                        onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/100'; }}
                       />
                     </Card>
                   </Grid>

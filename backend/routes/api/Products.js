@@ -1,43 +1,73 @@
 const router = require("express").Router();
-const Produit = require("../../models/Product"); // Chemin vers votre modèle
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+const fs = require("fs");
+const path = require("path");
+const Produit = require("../../models/Product");
+const multer = require("multer");
+const { uploadBuffer, destroyImage } = require("../../utils/cloudinary");
 
-// Créer le dossier uploads s'il n'existe pas
-const uploadsDir = path.join(__dirname, '../../uploads');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-  console.log('Dossier uploads créé');
-}
+const upload = multer({ storage: multer.memoryStorage() });
+const LOCAL_UPLOAD_DIR = path.join(__dirname, "../../uploads/products");
 
-// Configuration multer pour les images
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir); // Utiliser le chemin absolu
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname)); // Nom unique
+const saveLocalImage = async (file) => {
+  if (!fs.existsSync(LOCAL_UPLOAD_DIR)) {
+    fs.mkdirSync(LOCAL_UPLOAD_DIR, { recursive: true });
   }
-});
 
-const upload = multer({ storage: storage });
+  const extension = path.extname(file.originalname) || ".jpg";
+  const filename = `${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`;
+  const filePath = path.join(LOCAL_UPLOAD_DIR, filename);
 
+  await fs.promises.writeFile(filePath, file.buffer);
+  return `/uploads/products/${filename}`;
+};
 
-// --- CRÉER (Ajouter) ---
-// @route   POST api/produits/add
-router.post("/add", upload.array('images', 10), async (req, res) => {
+const deleteLocalImage = async (imageUrl) => {
+  if (!imageUrl || !imageUrl.startsWith("/uploads/products/")) return;
+  const filePath = path.join(__dirname, "../../", imageUrl);
+  if (fs.existsSync(filePath)) {
+    await fs.promises.unlink(filePath);
+  }
+};
+
+router.post("/add", upload.array("images", 10), async (req, res) => {
   const { name, quantite, prixAchat, prixVente, unite, categorie } = req.body;
 
   if (!name || quantite == null || prixAchat == null || prixVente == null || !unite || !categorie) {
     return res.status(400).json({
       status: "notok",
-      msg: "Veuillez renseigner tous les champs requis (name, quantite, prixAchat, prixVente, unite, categorie)",
+      msg: "Veuillez renseigner tous les champs requis (name, quantite, prixAchat, prixVente, unite, categorie)"
     });
   }
 
+  const cloudinaryReady =
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET;
+
+  if (req.files && req.files.length > 0 && !cloudinaryReady) {
+    return res.status(500).json({ status: "error", msg: "Cloudinary non configuré, impossible de télécharger des images" });
+  }
+
   try {
-    const images = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+    console.log("Ajout produit: body=", req.body, "files=", req.files?.length);
+
+    const images =
+      req.files && req.files.length > 0
+        ? await Promise.all(
+            req.files.map(async (file) => {
+              if (cloudinaryReady) {
+                const uploadedImage = await uploadBuffer(file.buffer, "fromagerie-smine/products");
+                if (!uploadedImage || !uploadedImage.secure_url) {
+                  throw new Error("Erreur Cloudinary: réponse invalide");
+                }
+                return uploadedImage.secure_url;
+              }
+
+              return await saveLocalImage(file);
+            })
+          )
+        : [];
+
     const newProduit = new Produit({
       name,
       quantite: Number(quantite),
@@ -45,40 +75,38 @@ router.post("/add", upload.array('images', 10), async (req, res) => {
       prixVente: Number(prixVente),
       unite,
       categorie,
-      images,
+      images
     });
+
     const savedProduit = await newProduit.save();
 
     res.status(201).json({
       status: "ok",
-      msg: "Produit ajouté avec succès",
-      produit: savedProduit,
+      msg: "Produit ajoute avec succes",
+      produit: savedProduit
     });
   } catch (err) {
-    res.status(500).json({ status: "error", msg: "Erreur lors de l'ajout" });
+    console.error("Erreur ajout produit:", err);
+    res.status(500).json({ status: "error", msg: "Erreur lors de l'ajout", error: err.message });
   }
 });
 
-// --- LIRE (Récupérer tout) ---
-// @route   GET api/produits/
 router.get("/", async (req, res) => {
   try {
-    const produits = await Produit.find().populate('categorie', 'nom');
+    const produits = await Produit.find().populate("categorie", "nom");
     res.status(200).json({
       status: "ok",
-      produits,
+      produits
     });
   } catch (err) {
     res.status(500).json({ status: "error", msg: "Erreur serveur" });
   }
 });
 
-// --- LIRE TOUS LES PRODUITS POUR LES DIAGRAMMES ---
-// @route   GET api/produits/allProducts
 router.get("/allProducts", async (req, res) => {
   try {
-    const produits = await Produit.find().populate('categorie', 'nom');
-    const data = produits.map(p => ({
+    const produits = await Produit.find().populate("categorie", "nom");
+    const data = produits.map((p) => ({
       libelle: p.name,
       quantite: p.quantite,
       unite: p.unite,
@@ -90,9 +118,12 @@ router.get("/allProducts", async (req, res) => {
   }
 });
 
-// --- MODIFIER ---
-// @route   PUT api/produits/update/:id
-router.put("/update/:id", upload.array('images', 10), async (req, res) => {
+router.put("/update/:id", upload.array("images", 10), async (req, res) => {
+  const cloudinaryReady =
+    process.env.CLOUDINARY_CLOUD_NAME &&
+    process.env.CLOUDINARY_API_KEY &&
+    process.env.CLOUDINARY_API_SECRET;
+
   try {
     const { name, quantite, prixAchat, prixVente, unite, categorie } = req.body;
     const updateData = {
@@ -101,60 +132,81 @@ router.put("/update/:id", upload.array('images', 10), async (req, res) => {
       ...(prixAchat !== undefined && { prixAchat: Number(prixAchat) }),
       ...(prixVente !== undefined && { prixVente: Number(prixVente) }),
       ...(unite !== undefined && { unite }),
-      ...(categorie !== undefined && { categorie }),
+      ...(categorie !== undefined && { categorie })
     };
 
-    // Récupérer le produit existant pour conserver les anciennes images si nécessaire
     const existingProduit = await Produit.findById(req.params.id);
     if (!existingProduit) {
-      return res.status(404).json({ status: "notok", msg: "Produit non trouvé" });
+      return res.status(404).json({ status: "notok", msg: "Produit non trouve" });
     }
 
-    // Si de nouvelles images sont envoyées, les remplacer
     if (req.files && req.files.length > 0) {
-      console.log(`Fichiers reçus: ${req.files.length}`);
-      updateData.images = req.files.map(file => `/uploads/${file.filename}`);
-      console.log("Nouvelles images:", updateData.images);
+      if (existingProduit.images?.length) {
+        await Promise.all(
+          existingProduit.images.map(async (image) => {
+            if (image.startsWith("http")) {
+              return destroyImage(image);
+            }
+            return deleteLocalImage(image);
+          })
+        );
+      }
+
+      updateData.images = await Promise.all(
+        req.files.map(async (file) => {
+          if (cloudinaryReady) {
+            const uploadedImage = await uploadBuffer(file.buffer, "fromagerie-smine/products");
+            if (!uploadedImage || !uploadedImage.secure_url) {
+              throw new Error("Erreur Cloudinary: réponse invalide");
+            }
+            return uploadedImage.secure_url;
+          }
+          return await saveLocalImage(file);
+        })
+      );
     } else {
-      // Sinon, conserver les anciennes images
       updateData.images = existingProduit.images || [];
     }
 
     const updatedProduit = await Produit.findByIdAndUpdate(
       req.params.id,
       { $set: updateData },
-      { new: true } // Pour renvoyer le document modifié
+      { new: true }
     );
 
     if (!updatedProduit) {
-      return res.status(404).json({ status: "notok", msg: "Produit non trouvé" });
+      return res.status(404).json({ status: "notok", msg: "Produit non trouve" });
     }
 
     res.status(200).json({
       status: "ok",
-      msg: "Produit modifié avec succès",
-      produit: updatedProduit,
+      msg: "Produit modifie avec succes",
+      produit: updatedProduit
     });
   } catch (err) {
+    console.error("Erreur modification produit:", err);
     res.status(500).json({ status: "error", msg: "Erreur lors de la modification" });
   }
 });
 
-// --- SUPPRIMER ---
-// @route   DELETE api/produits/delete/:id
 router.delete("/delete/:id", async (req, res) => {
   try {
     const deletedProduit = await Produit.findByIdAndDelete(req.params.id);
 
     if (!deletedProduit) {
-      return res.status(404).json({ status: "notok", msg: "Produit non trouvé" });
+      return res.status(404).json({ status: "notok", msg: "Produit non trouve" });
+    }
+
+    if (deletedProduit.images?.length) {
+      await Promise.all(deletedProduit.images.map((image) => destroyImage(image)));
     }
 
     res.status(200).json({
       status: "ok",
-      msg: "Produit supprimé avec succès",
+      msg: "Produit supprime avec succes"
     });
   } catch (err) {
+    console.error("Erreur suppression produit:", err);
     res.status(500).json({ status: "error", msg: "Erreur lors de la suppression" });
   }
 });
