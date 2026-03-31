@@ -34,8 +34,9 @@ const Login = () => {
             }
         } catch (error) {
             setMessageType("error");
+            console.error("Login error", error);
             const serverMessage = error.response?.data?.msg || error.response?.data?.message;
-            setMessage(serverMessage || "Une erreur est survenue lors de la connexion");
+            setMessage(serverMessage || error.message || "Une erreur est survenue lors de la connexion");
         } finally {
             setIsSubmitting(false);
         }

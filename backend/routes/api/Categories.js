@@ -79,7 +79,12 @@ router.post("/add", upload.single("image"), async (req, res) => {
       return res.status(400).json({ status: "notok", msg: "Categorie deja existante" });
     }
 
-    res.status(500).json({ status: "error", msg: "Erreur serveur", error: err.message });
+    res.status(500).json({
+      status: "error",
+      msg: "Erreur serveur lors de la création de catégorie",
+      error: err.message,
+      details: err.stack
+    });
   }
 });
 

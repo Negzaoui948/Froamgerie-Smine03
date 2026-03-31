@@ -87,7 +87,12 @@ router.post("/add", upload.array("images", 10), async (req, res) => {
     });
   } catch (err) {
     console.error("Erreur ajout produit:", err);
-    res.status(500).json({ status: "error", msg: "Erreur lors de l'ajout", error: err.message });
+    res.status(500).json({
+      status: "error",
+      msg: "Erreur serveur lors de l'ajout du produit",
+      error: err.message,
+      details: err.stack
+    });
   }
 });
 
