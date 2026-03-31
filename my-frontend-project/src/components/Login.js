@@ -24,7 +24,7 @@ const Login = () => {
         try {
             const res = await axios.post(buildApiUrl("/users/login"), formData);
             setMessageType("success");
-            setMessage(res.data.msg);
+            setMessage(res.data.msg || res.data.message || "Connexion réussie");
             if (res.data.token) {
                 localStorage.setItem("token", res.data.token);
                 localStorage.setItem("name", res.data.username);
@@ -34,7 +34,8 @@ const Login = () => {
             }
         } catch (error) {
             setMessageType("error");
-            setMessage(error.response?.data?.msg || "Une erreur est survenue");
+            const serverMessage = error.response?.data?.msg || error.response?.data?.message;
+            setMessage(serverMessage || "Une erreur est survenue lors de la connexion");
         } finally {
             setIsSubmitting(false);
         }
