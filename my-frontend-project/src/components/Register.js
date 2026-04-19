@@ -1,18 +1,32 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import "./Auth.css";
 import { buildApiUrl } from "../config/api";
 
 const Register = () => {
+  const location = useLocation();
   const [formData, setFormData] = useState({
     username: "",
     email: "",
-    password: ""
+    password: "",
+    phone: "",
+    address: "",
+    role: "user"
   });
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const target = searchParams.get("target");
+    if (target === "commercial") {
+      setFormData(prev => ({ ...prev, role: "commercial" }));
+    } else {
+      setFormData(prev => ({ ...prev, role: "user" }));
+    }
+  }, [location.search]);
 
   const handleChange = (e) => {
     setFormData({
@@ -41,27 +55,55 @@ const Register = () => {
     }
   };
 
+  const isCommercialRegistration = formData.role === "commercial";
+
   return (
     <div className="auth-shell">
       <div className="auth-card">
         <section className="auth-hero">
-          <span className="auth-kicker">Nouvelle inscription</span>
-          <h1>Creez votre compte et lancez votre espace en quelques secondes.</h1>
+          <span className="auth-kicker">
+            {isCommercialRegistration ? "Inscription commercial" : "Nouvelle inscription"}
+          </span>
+          <h1>
+            {isCommercialRegistration
+              ? "Créez votre compte commercial"
+              : "Creez votre compte et lancez votre espace en quelques secondes."
+            }
+          </h1>
           <p>
-            Commencez avec une experience plus soignee, une meilleure lisibilite et
-            un formulaire pense pour inspirer confiance des le premier ecran.
+            {isCommercialRegistration
+              ? "Rejoignez l'équipe commerciale et accédez aux outils de gestion des commandes clients."
+              : "Commencez avec une experience plus soignee, une meilleure lisibilite et un formulaire pense pour inspirer confiance des le premier ecran."
+            }
           </p>
           <ul className="auth-feature-list">
-            <li>Creation de compte simple et guidee</li>
-            <li>Interface nette avec hierarchy visuelle claire</li>
-            <li>Compatible mobile sans perte de confort</li>
+            {isCommercialRegistration ? (
+              <>
+                <li>Accès aux commandes clients</li>
+                <li>Interface dédiée aux commerciaux</li>
+                <li>Suivi des demandes professionnelles</li>
+              </>
+            ) : (
+              <>
+                <li>Creation de compte simple et guidee</li>
+                <li>Interface nette avec hierarchy visuelle claire</li>
+                <li>Compatible mobile sans perte de confort</li>
+              </>
+            )}
           </ul>
         </section>
 
         <section className="auth-panel">
           <div className="auth-form-header">
-            <h2>Inscription</h2>
-            <p>Renseignez vos informations pour creer votre compte.</p>
+            <h2>
+              {isCommercialRegistration ? "Inscription commercial" : "Inscription"}
+            </h2>
+            <p>
+              {isCommercialRegistration
+                ? "Renseignez vos informations pour créer votre compte commercial."
+                : "Renseignez vos informations pour creer votre compte."
+              }
+            </p>
           </div>
 
           <form onSubmit={handleSubmit} className="auth-form">
@@ -101,6 +143,30 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
+              />
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="register-phone">Téléphone</label>
+              <input
+                id="register-phone"
+                type="tel"
+                name="phone"
+                placeholder="+216 ..."
+                value={formData.phone}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div className="auth-field">
+              <label htmlFor="register-address">Adresse</label>
+              <input
+                id="register-address"
+                type="text"
+                name="address"
+                placeholder="Votre adresse"
+                value={formData.address}
+                onChange={handleChange}
               />
             </div>
 

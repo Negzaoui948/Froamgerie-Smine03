@@ -95,13 +95,6 @@ function ClientDashboard() {
             <button type="button" className="client-btn" onClick={() => setSelectedCat("")}>
               Voir tous les produits
             </button>
-            <button
-              type="button"
-              className="client-btn client-btn-secondary"
-              onClick={() => navigate("/client/checkout")}
-            >
-              Aller au paiement
-            </button>
           </div>
         </div>
       </section>
@@ -262,9 +255,6 @@ function ClientDashboard() {
             <p>Categorie: {selectedProduct.categorie?.nom || "Non definie"}</p>
 
             <div className="client-hero-actions">
-              <button type="button" className="client-btn" onClick={() => navigate("/client/checkout")}>
-                Commander
-              </button>
               <button
                 type="button"
                 className="client-btn client-btn-secondary"

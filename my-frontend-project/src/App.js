@@ -1,10 +1,14 @@
 import React from "react";
 import Register from "./components/Register";
-import Login from "./components/Login"
+import Login from "./components/Login";
+import GrosLogin from "./components/GrosLogin";
+import CommercialLogin from "./components/CommercialLogin";
 import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
+import GrosPage from "./pages/gros";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Navbar from "./pages/Navbar";
+import ClientDashboard from "./pages/ClientDashboard";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import CheckoutForm from "./pages/CheckoutForm";
@@ -20,6 +24,8 @@ const App = () => {
       <Route path="/register" element={<Register />} />
       <Route path="/Login" element={<Login />} />
       <Route path="/login" element={<Navigate to="/Login" replace />} />
+      <Route path="/gros/login" element={<GrosLogin />} />
+      <Route path="/commercial/login" element={<CommercialLogin />} />
       <Route path="/client" element={<Navigate to="/client/home" replace />} />
       <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
 
@@ -35,7 +41,17 @@ const App = () => {
         <Home />
       </>} />
 
-      <Route path="/client/dashboard" element={<Navigate to="/client/home" replace />} />
+      <Route path="/gros" element={<>
+        <Navbar space="gros" />
+        <GrosPage />
+      </>} />
+
+      <Route path="/client/dashboard" element={
+        <>
+          <Navbar space="client" />
+          <ClientDashboard />
+        </>
+      } />
 
       <Route path="/client/checkout" element={<>
         <Navbar space="client" />

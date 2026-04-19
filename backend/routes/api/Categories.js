@@ -4,6 +4,7 @@ const multer = require("multer");
 const { uploadBuffer, destroyImage } = require("../../utils/cloudinary");
 
 const upload = multer({ storage: multer.memoryStorage() });
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 router.get("/", async (req, res) => {
   try {
@@ -43,6 +44,13 @@ router.post("/add", upload.single("image"), async (req, res) => {
 
     if (req.file) {
       if (!cloudinaryReady) {
+        if (IS_VERCEL) {
+          return res.status(500).json({
+            status: "error",
+            msg: "Upload d'image impossible: Cloudinary n'est pas configuré (obligatoire sur Vercel)."
+          });
+        }
+
         console.warn("⚠️ Cloudinary non configuré, catégorie créée sans image");
       } else {
         try {
@@ -110,6 +118,13 @@ router.put("/update/:id", upload.single("image"), async (req, res) => {
 
     if (req.file) {
       if (!cloudinaryReady) {
+        if (IS_VERCEL) {
+          return res.status(500).json({
+            status: "error",
+            msg: "Upload d'image impossible: Cloudinary n'est pas configuré (obligatoire sur Vercel)."
+          });
+        }
+
         console.warn("⚠️ Cloudinary non configuré, catégorie mise à jour sans nouvelle image");
       } else {
         if (category.image && !category.image.includes("placeholder")) {

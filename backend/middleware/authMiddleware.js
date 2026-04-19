@@ -1,26 +1,54 @@
 const jwt = require("jsonwebtoken");
 const config = require("config");
+const User = require("../models/User");
 
-const authMiddleware = (req, res, next) => {
+const parseCookies = (cookieHeader = "") =>
+  cookieHeader.split(";").reduce((cookies, cookie) => {
+    const [name, ...rest] = cookie.split("=");
+    if (!name) return cookies;
+    cookies[name.trim()] = decodeURIComponent(rest.join("=").trim());
+    return cookies;
+  }, {});
+
+const authMiddleware = async (req, res, next) => {
   const JWT_SECRET = process.env.JWT_SECRET || config.get("jwtSecret");
 
-  // Récupérer le token depuis le header Authorization (Bearer token)
-  const token = req.headers.authorization?.split(" ")[1];
+  const headerToken = req.headers.authorization?.split(" ")[1];
+  const cookies = parseCookies(req.headers.cookie || "");
+  const token = headerToken || cookies.auth_token;
 
-  // Vérifier si le token existe
+  console.log("[authMiddleware] Checking token...");
+  console.log("[authMiddleware] headerToken:", headerToken ? "present" : "missing");
+  console.log("[authMiddleware] cookies.auth_token:", cookies.auth_token ? "present" : "missing");
+  console.log("[authMiddleware] final token:", token ? "present" : "missing");
+
   if (!token) {
-    return res.status(401).json({ message: "Accès refusé. Aucun token fourni." });
+    console.log("[authMiddleware] No token provided");
+    return res.status(401).json({ message: "Accès refusé. Aucun token fourni.", status: "notok" });
   }
 
   try {
-    // Vérifier et décoder le token
     const decoded = jwt.verify(token, JWT_SECRET);
+    console.log("[authMiddleware] Token verified successfully:", { id: decoded.id, role: decoded.role });
 
-    // Ajouter les infos du user dans la requête
-    req.user = decoded; // contient id, name, etc.
+    let userInfo = decoded;
+    if (!decoded.role && decoded.id) {
+      const user = await User.findById(decoded.id).select("role email username");
+      if (user) {
+        userInfo = {
+          ...decoded,
+          role: user.role,
+          email: user.email,
+          name: user.username
+        };
+      }
+    }
+
+    req.user = userInfo;
     next();
   } catch (err) {
-    res.status(401).json({ message: "Token invalide." });
+    console.error("[authMiddleware] Token verification failed:", err.message);
+    res.status(401).json({ message: "Token invalide.", status: "notok", error: err.message });
   }
 };
 

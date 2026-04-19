@@ -7,6 +7,16 @@ const { uploadBuffer, destroyImage } = require("../../utils/cloudinary");
 
 const upload = multer({ storage: multer.memoryStorage() });
 const LOCAL_UPLOAD_DIR = path.join(__dirname, "../../uploads/products");
+const IS_VERCEL = Boolean(process.env.VERCEL);
+
+const parseBoolean = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return value === "true" || value === "1" || value === "on";
+  }
+  return Boolean(value);
+};
 
 const saveLocalImage = async (file) => {
   if (!fs.existsSync(LOCAL_UPLOAD_DIR)) {
@@ -30,12 +40,52 @@ const deleteLocalImage = async (imageUrl) => {
 };
 
 router.post("/add", upload.array("images", 10), async (req, res) => {
-  const { name, quantite, prixAchat, prixVente, unite, categorie } = req.body;
+  const { name, description = "", quantite, prixAchat, prixVente, unite, categorie } = req.body;
+  const uniteGros = typeof req.body.uniteGros === "string" && req.body.uniteGros.trim() ? req.body.uniteGros.trim() : null;
+  const venteParGros = parseBoolean(req.body.venteParGros) || false;
+  const prixVenteGros = req.body.prixVenteGros !== undefined && req.body.prixVenteGros !== ""
+    ? Number(req.body.prixVenteGros)
+    : null;
+
+  console.log("=== DEBUG PRODUCT ADD ===");
+  console.log("req.body:", req.body);
+  console.log("categorie received:", categorie);
+  console.log("categorie type:", typeof categorie);
+  console.log("categorie is valid ObjectId:", require('mongoose').Types.ObjectId.isValid(categorie));
+
+  // Check if categorie is a valid ObjectId
+  if (categorie && !require('mongoose').Types.ObjectId.isValid(categorie)) {
+    console.log("Invalid categorie ObjectId");
+    return res.status(400).json({
+      status: "notok",
+      msg: "ID de catégorie invalide"
+    });
+  }
 
   if (!name || quantite == null || prixAchat == null || prixVente == null || !unite || !categorie) {
+    console.log("Validation failed - missing fields");
     return res.status(400).json({
       status: "notok",
       msg: "Veuillez renseigner tous les champs requis (name, quantite, prixAchat, prixVente, unite, categorie)"
+    });
+  }
+
+  if (venteParGros && (prixVenteGros == null || Number.isNaN(prixVenteGros))) {
+    console.log("Validation failed - prixVenteGros invalid");
+    return res.status(400).json({
+      status: "notok",
+      msg: "Veuillez fournir un prix de vente par gros valide lorsque la vente par gros est activée"
+    });
+  }
+
+  // Check if categorie exists
+  const Categorie = require("../../models/Categorie");
+  const categorieExists = await Categorie.findById(categorie);
+  if (!categorieExists) {
+    console.log("Categorie not found in database");
+    return res.status(400).json({
+      status: "notok",
+      msg: "Catégorie sélectionnée n'existe pas"
     });
   }
 
@@ -44,12 +94,15 @@ router.post("/add", upload.array("images", 10), async (req, res) => {
     process.env.CLOUDINARY_API_KEY &&
     process.env.CLOUDINARY_API_SECRET;
 
-  if (req.files && req.files.length > 0 && !cloudinaryReady) {
-    return res.status(500).json({ status: "error", msg: "Cloudinary non configuré, impossible de télécharger des images" });
-  }
-
   try {
     console.log("Ajout produit: body=", req.body, "files=", req.files?.length);
+
+    if (IS_VERCEL && req.files?.length && !cloudinaryReady) {
+      return res.status(500).json({
+        status: "error",
+        msg: "Upload d'images impossible: Cloudinary n'est pas configuré (obligatoire sur Vercel)."
+      });
+    }
 
     const images =
       req.files && req.files.length > 0
@@ -70,15 +123,22 @@ router.post("/add", upload.array("images", 10), async (req, res) => {
 
     const newProduit = new Produit({
       name,
+      description,
       quantite: Number(quantite),
       prixAchat: Number(prixAchat),
       prixVente: Number(prixVente),
+      venteParGros,
+      prixVenteGros: venteParGros ? prixVenteGros : null,
+      uniteGros: uniteGros || null,
       unite,
       categorie,
       images
     });
 
+    console.log("Produit object before save:", newProduit);
+    console.log("Saving product to database...");
     const savedProduit = await newProduit.save();
+    console.log("Produit saved successfully:", savedProduit._id);
 
     res.status(201).json({
       status: "ok",
@@ -113,6 +173,7 @@ router.get("/allProducts", async (req, res) => {
     const produits = await Produit.find().populate("categorie", "nom");
     const data = produits.map((p) => ({
       libelle: p.name,
+      description: p.description || "",
       quantite: p.quantite,
       unite: p.unite,
       categorie: p.categorie ? p.categorie.nom : null
@@ -130,14 +191,35 @@ router.put("/update/:id", upload.array("images", 10), async (req, res) => {
     process.env.CLOUDINARY_API_SECRET;
 
   try {
-    const { name, quantite, prixAchat, prixVente, unite, categorie } = req.body;
+    const { name, description, quantite, prixAchat, prixVente, unite, categorie } = req.body;
+    const venteParGros = parseBoolean(req.body.venteParGros);
+    const prixVenteGros =
+      req.body.prixVenteGros !== undefined && req.body.prixVenteGros !== ""
+        ? Number(req.body.prixVenteGros)
+        : null;
+    const uniteGros =
+      typeof req.body.uniteGros === "string" && req.body.uniteGros.trim()
+        ? req.body.uniteGros.trim()
+        : null;
+
+    if (venteParGros && (prixVenteGros == null || Number.isNaN(prixVenteGros))) {
+      return res.status(400).json({
+        status: "notok",
+        msg: "Lorsque la vente par gros est activée, vous devez fournir un prix de vente par groupe valide."
+      });
+    }
+
     const updateData = {
       ...(name !== undefined && { name }),
+      ...(description !== undefined && { description }),
       ...(quantite !== undefined && { quantite: Number(quantite) }),
       ...(prixAchat !== undefined && { prixAchat: Number(prixAchat) }),
       ...(prixVente !== undefined && { prixVente: Number(prixVente) }),
       ...(unite !== undefined && { unite }),
-      ...(categorie !== undefined && { categorie })
+      ...(uniteGros !== undefined && { uniteGros }),
+      ...(categorie !== undefined && { categorie }),
+      ...(venteParGros !== undefined && { venteParGros }),
+      ...(prixVenteGros !== undefined && { prixVenteGros: venteParGros ? prixVenteGros : null })
     };
 
     const existingProduit = await Produit.findById(req.params.id);
@@ -146,6 +228,13 @@ router.put("/update/:id", upload.array("images", 10), async (req, res) => {
     }
 
     if (req.files && req.files.length > 0) {
+      if (IS_VERCEL && !cloudinaryReady) {
+        return res.status(500).json({
+          status: "error",
+          msg: "Upload d'images impossible: Cloudinary n'est pas configuré (obligatoire sur Vercel)."
+        });
+      }
+
       if (existingProduit.images?.length) {
         await Promise.all(
           existingProduit.images.map(async (image) => {
@@ -203,7 +292,14 @@ router.delete("/delete/:id", async (req, res) => {
     }
 
     if (deletedProduit.images?.length) {
-      await Promise.all(deletedProduit.images.map((image) => destroyImage(image)));
+      await Promise.all(
+        deletedProduit.images.map((image) => {
+          if (typeof image === "string" && image.startsWith("http")) {
+            return destroyImage(image);
+          }
+          return deleteLocalImage(image);
+        })
+      );
     }
 
     res.status(200).json({

@@ -1,12 +1,22 @@
 @import url("https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&family=Playfair+Display:wght@600;700;800&display=swap");
 
+:root {
+  --red: #d62828;
+  --yellow: #f4c542;
+  --white: #ffffff;
+  --cream: #fff5e6;
+  --text: #333333;
+  --text-light: #777777;
+}
+
 body {
   font-family: "Open Sans", sans-serif;
-  background-color: #fffaf5;
+  background-color: var(--cream);
+  color: var(--text);
 }
 
 .home-page {
-  color: #2f241b;
+  color: var(--text);
 }
 
 .site-navbar {
@@ -16,27 +26,38 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
+  gap: 0.75rem;
+  padding: 0.7rem 1.1rem;
   background: rgba(255, 250, 245, 0.92);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(139, 94, 52, 0.16);
 }
 
 .navbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
   color: #8b5e34;
   font-family: "Playfair Display", serif;
-  font-size: 1.6rem;
+  font-size: 1.3rem;
   letter-spacing: 0.04em;
   background: transparent;
   border: none;
   cursor: pointer;
 }
 
+.navbar-brand-logo {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
 .navbar-actions {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.7rem;
   position: relative;
   flex-wrap: wrap;
 }
@@ -47,7 +68,7 @@ body {
 }
 
 .navbar-space-link {
-  padding: 0.7rem 1rem;
+  padding: 0.55rem 0.85rem;
   border-radius: 999px;
   border: 1px solid rgba(139, 94, 52, 0.2);
   background: #fff;
@@ -55,6 +76,29 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: transform 0.25s ease, background-color 0.25s ease, color 0.25s ease;
+}
+
+.navbar-space-link-secondary {
+  background: #8b5e34;
+  color: #fff;
+  border-color: #8b5e34;
+}
+
+.navbar-space-link-secondary:hover {
+  background: #6c4b2d;
+  border-color: #6c4b2d;
+  color: #fff;
+}
+
+.navbar-login-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.navbar-dropdown-logins {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .navbar-space-link:hover {
@@ -86,8 +130,8 @@ body {
 }
 
 .social-icon-button {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -107,8 +151,8 @@ body {
 }
 
 .social-icon-svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .navbar-dropdown {
@@ -154,6 +198,7 @@ body {
   display: grid;
   place-items: center;
   isolation: isolate;
+  background: linear-gradient(135deg, #ffffff 0%, #fce4ec 100%);
 }
 
 .bg-video {
@@ -191,7 +236,7 @@ body {
 
 .welcome-text {
   z-index: 2;
-  color: #fff;
+  color: var(--white);
   text-align: center;
   animation: slideIn 5.8s ease-out forwards;
   opacity: 0;
@@ -210,12 +255,28 @@ body {
   }
 }
 
+.gros-navbar {
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid rgba(31, 27, 22, 0.08);
+  flex-wrap: wrap;
+}
+
+.gros-navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.gros-navbar-actions .social-links-group {
+  order: 3;
+}
+
 .welcome-text h2 {
   font-family: "Playfair Display", serif;
   font-size: 2rem;
   letter-spacing: 4px;
   text-transform: uppercase;
-  color: #f9c74f;
+  color: var(--yellow);
   margin-bottom: 0.5rem;
 }
 
@@ -232,7 +293,7 @@ body {
 .welcome-text p {
   font-family: "Open Sans", sans-serif;
   font-size: 1.2rem;
-  color: #f8f9fa;
+  color: var(--white);
   margin-top: 1rem;
 }
 
@@ -547,13 +608,13 @@ body {
   padding: 10px 25px;
   border: none;
   cursor: pointer;
-  background-color: #f9c74f;
-  color: #24160b;
+  background-color: var(--yellow);
+  color: var(--text);
   transition: transform 0.3s ease, background-color 0.3s ease;
 }
 
 .btn:hover {
-  background-color: #ffcc33;
+  background-color: #fce77c;
   transform: translateY(-2px);
 }
 
@@ -588,18 +649,62 @@ footer {
   .site-navbar {
     flex-direction: column;
     align-items: stretch;
+    padding: 0.65rem 0.85rem;
+  }
+
+  .navbar-brand {
+    justify-content: center;
+    width: 100%;
+    font-size: 1.05rem;
+    text-align: center;
+    white-space: normal;
+  }
+
+  .navbar-brand-logo {
+    width: 32px;
+    height: 32px;
   }
 
   .navbar-actions {
+    width: 100%;
     justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .gros-navbar-actions {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .navbar-login-buttons {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .navbar-space-link,
+  .navbar-menu-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .navbar-greeting {
+    width: 100%;
+    text-align: center;
   }
 
   .social-links-group {
     order: 2;
+    width: 100%;
+    justify-content: center;
   }
 
   .navbar-dropdown {
     left: 0;
+    right: 0;
+    min-width: 0;
   }
 
   .welcome-text h1 {

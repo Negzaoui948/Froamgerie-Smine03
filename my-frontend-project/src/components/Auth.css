@@ -181,6 +181,23 @@
   cursor: wait;
 }
 
+.auth-secondary-button {
+  width: 100%;
+  border: 0;
+  border-radius: 16px;
+  padding: 12px 0;
+  font-weight: 700;
+  color: var(--auth-primary-dark);
+  background: rgba(184, 92, 56, 0.12);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.auth-secondary-button:hover {
+  background: rgba(184, 92, 56, 0.18);
+  transform: translateY(-1px);
+}
+
 .auth-message {
   padding: 12px 14px;
   border-radius: 14px;

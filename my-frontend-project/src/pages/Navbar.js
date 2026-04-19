@@ -40,10 +40,20 @@ function Navbar({ space }) {
   const location = useLocation();
   const name = localStorage.getItem("name");
   const token = localStorage.getItem("token");
+  const userRole = localStorage.getItem("role");
   const [menuOpen, setMenuOpen] = useState(false);
   const whatsappUrl = "https://wa.me/21620344677";
 
-  const currentSpace = space || (location.pathname.startsWith("/admin") ? "admin" : "client");
+  const currentSpace =
+    space ||
+    (location.pathname.startsWith("/admin")
+      ? "admin"
+      : location.pathname.startsWith("/gros")
+        ? "gros"
+        : "client");
+  const isAdminSpace = currentSpace === "admin";
+  const isGrosSpace = currentSpace === "gros";
+  const isClientSpace = currentSpace === "client";
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -56,39 +66,36 @@ function Navbar({ space }) {
     setMenuOpen(false);
   };
 
-  const scrollToClientSection = (sectionId) => {
-    if (location.pathname === "/client/home") {
-      const target = document.getElementById(sectionId);
-      target?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setMenuOpen(false);
-      return;
-    }
-
-    navigate(`/client/home#${sectionId}`);
-    setMenuOpen(false);
-  };
-
   const openExternalLink = (url) => {
     window.open(url, "_blank", "noopener,noreferrer");
     setMenuOpen(false);
   };
 
-  const brandTarget = currentSpace === "admin" ? "/admin/dashboard" : "/client/home";
-  const links =
-    currentSpace === "admin"
+  const brandTarget = isAdminSpace
+    ? "/admin/dashboard"
+    : isGrosSpace
+      ? "/gros"
+      : "/client/home";
+  const brandLabel = isAdminSpace ? "Espace Admin" : isGrosSpace ? "Vente en gros" : "Fromagerie Smine";
+  const showGrosLinkInClientMenu = isClientSpace && location.pathname !== "/client/home";
+  const showClientDashboardLink = isClientSpace && location.pathname !== "/client/home";
+  const links = isAdminSpace
+    ? [
+        { label: "Gestion Admin", to: "/admin/dashboard" },
+        { label: "Espace Client", to: "/client/dashboard" }
+      ]
+    : isGrosSpace
       ? [
-          { label: "Gestion Admin", to: "/admin/dashboard" },
-          { label: "Espace Client", to: "/client/home" }
+          { label: "Catalogue", sectionId: "products", sectionPath: "/gros" },
+          { label: "Panier", sectionId: "cart", sectionPath: "/gros" }
         ]
       : [
-         // { label: "Accueil", to: "/client/home" },
-         // { label: "Catalogue", to: "/client/home" },
-         // { label: "Paiement", to: "/client/checkout" },
-          { label: "Contactez-nous", sectionId: "contact" }
+          ...(showClientDashboardLink ? [{ label: "Espace Client", to: "/client/dashboard" }] : []),
+          { label: "Contactez-nous", sectionId: "contact", sectionPath: "/client/home" },
+          ...(showGrosLinkInClientMenu ? [{ label: "Vente en gros", to: "/gros" }] : [])
         ];
-
   const socialLinks =
-    currentSpace === "client"
+    isClientSpace || isGrosSpace
       ? [
           {
             label: "Facebook",
@@ -107,27 +114,121 @@ function Navbar({ space }) {
           }
         ]
       : [];
+  const sectionPaths = {
+    client: "/client/home",
+    gros: "/gros"
+  };
+
+  const scrollToSection = (link) => {
+    const targetPath = link.sectionPath || sectionPaths[link.sectionSpace] || sectionPaths[currentSpace] || "/client/home";
+    navigate(`${targetPath}#${link.sectionId}`);
+  };
+
+  const goToLogin = () => {
+    navigate("/login");
+  };
+
+  const goToGrosCart = () => {
+    navigate("/gros#cart");
+  };
+
+  const goToGrosOrders = () => {
+    navigate("/gros#orders");
+  };
+
+  const openLoginPage = () => {
+    goToLogin();
+  };
+
+  if (isGrosSpace) {
+    return (
+      <header className="site-navbar gros-navbar">
+        <button className="navbar-brand" type="button" onClick={() => navigate("/gros")}>
+          <img
+            src="/logo192.png"
+            alt="Fromagerie Smine"
+            className="navbar-brand-logo"
+          />
+          <span>{brandLabel}</span>
+        </button>
+        <div className="gros-navbar-actions">
+          <button
+            type="button"
+            className="social-icon-button"
+            aria-label="Panier"
+            title="Panier"
+            onClick={goToGrosCart}
+          >
+            <CartIcon />
+          </button>
+          <button type="button" className="navbar-space-link" onClick={goToGrosOrders}>
+            Mes demandes
+          </button>
+          <button
+            type="button"
+            className="navbar-space-link navbar-space-link-secondary"
+            onClick={goToLogin}
+          >
+            Login
+          </button>
+          <div className="social-links-group">
+            {socialLinks.map((link) => (
+              <button
+                key={link.label}
+                type="button"
+                className="social-icon-button"
+                aria-label={link.label}
+                title={link.label}
+                onClick={() => openExternalLink(link.external)}
+              >
+                <SocialIcon type={link.type} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="site-navbar">
       <button className="navbar-brand" type="button" onClick={() => navigate(brandTarget)}>
-        {currentSpace === "admin" ? "Espace Admin" : "Fromagerie Smine"}
+        <img
+          src="/logo192.png"
+          alt="Fromagerie Smine"
+          className="navbar-brand-logo"
+        />
+        <span>{brandLabel}</span>
       </button>
 
       <div className="navbar-actions">
-        
         <span className="navbar-greeting">
-          {currentSpace === "admin" ? `Bienvenue, ${name || "admin"} !` : "Bienvenue a Fromagerie Smine"}
+          {isAdminSpace
+            ? `Bienvenue, ${name || "admin"} !`
+            : isGrosSpace
+              ? "Vente en gros - Connexion clients"
+              : "Bienvenue a Fromagerie Smine"}
         </span>
-        {currentSpace === "client" && !token && (
+        {isClientSpace && (userRole === "admin" || userRole === "super_admin") && (
           <button
             type="button"
             className="navbar-space-link"
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/admin/dashboard")}
+          >
+            Admin Dashboard
+          </button>
+        )}
+
+        {(isGrosSpace || (isClientSpace && location.pathname !== "/client/home")) && !token && (
+          <button
+            type="button"
+            className="navbar-space-link navbar-space-link-secondary"
+            onClick={openLoginPage}
           >
             Login
           </button>
         )}
+
         {socialLinks.length > 0 && (
           <div className="social-links-group">
             {socialLinks.map((link) => (
@@ -166,7 +267,7 @@ function Navbar({ space }) {
                   }
 
                   if (link.sectionId) {
-                    scrollToClientSection(link.sectionId);
+                    handleMenuClick(() => scrollToSection(link));
                     return;
                   }
 
@@ -178,24 +279,41 @@ function Navbar({ space }) {
               </button>
             ))}
             {token ? (
-              <button className="nav-link logout-link" onClick={() => handleMenuClick(handleLogout)} type="button">
-                Login
+              <button
+                className="nav-link logout-link"
+                onClick={() => handleMenuClick(handleLogout)}
+                type="button"
+              >
+                Logout
               </button>
             ) : (
-              currentSpace === "client" && (
-                <button
-                  className="nav-link logout-link"
-                  onClick={() => handleMenuClick(() => navigate("/login"))}
-                  type="button"
-                >
-                  Login Admin
-                </button>
-              )
+              <div className="navbar-dropdown-logins">
+                {(isClientSpace || isGrosSpace) && (
+                  <button
+                    className="nav-link"
+                    onClick={() => handleMenuClick(openLoginPage)}
+                    type="button"
+                  >
+                    Login
+                  </button>
+                )}
+              </div>
             )}
           </div>
         )}
       </div>
     </header>
+  );
+}
+
+function CartIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="social-icon-svg">
+      <path
+        fill="currentColor"
+        d="M8 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm8 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm-9.7-3.2h10.9c.7 0 1.3-.4 1.5-1l2.2-6.3a.8.8 0 0 0-.8-1.1H6.2L5.6 3.8A1.6 1.6 0 0 0 4 2.6H2.8a.8.8 0 0 0 0 1.6H4l2.4 10.1a1.6 1.6 0 0 0 1.6 1.3Z"
+      />
+    </svg>
   );
 }
 

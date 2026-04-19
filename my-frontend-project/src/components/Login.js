@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./Auth.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { buildApiUrl } from "../config/api";
@@ -11,6 +11,7 @@ const Login = () => {
     const [messageType, setMessageType] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -22,15 +23,43 @@ const Login = () => {
         setMessage("");
 
         try {
-            const res = await axios.post(buildApiUrl("/users/login"), formData);
+            const res = await axios.post(buildApiUrl("/users/login"), formData, { withCredentials: true });
+            const roleRaw = res.data.role || localStorage.getItem("role") || "";
+            const role = String(roleRaw).toLowerCase().trim();
+            const token = res.data.token;
+            if (token) {
+                localStorage.setItem("token", token);
+            }
+            localStorage.setItem("name", res.data.username || "");
+            localStorage.setItem("email", res.data.email || "");
+            localStorage.setItem("role", role);
+
             setMessageType("success");
             setMessage(res.data.msg || res.data.message || "Connexion réussie");
-            if (res.data.token) {
-                localStorage.setItem("token", res.data.token);
-                localStorage.setItem("name", res.data.username);
-                localStorage.setItem("email", res.data.email || "");
-                localStorage.setItem("role", res.data.role || "");
+
+            const searchTarget = new URLSearchParams(location.search).get("target");
+            const normalizedTarget = searchTarget ? String(searchTarget).toLowerCase().trim() : "";
+            const effectiveTarget = normalizedTarget || role;
+            const isAdminTarget =
+                ["admin", "super_admin", "super-admin", "administrator"].includes(effectiveTarget) ||
+                effectiveTarget.includes("admin") ||
+                effectiveTarget.includes("dashboard");
+            const isCommercialTarget =
+                effectiveTarget === "commercial" ||
+                effectiveTarget.includes("commercial");
+            const isGrosTarget =
+                effectiveTarget === "user" ||
+                effectiveTarget === "gros" ||
+                effectiveTarget.includes("gros");
+
+            if (isAdminTarget) {
                 navigate("/admin/dashboard");
+            } else if (isCommercialTarget) {
+                navigate("/admin/dashboard#orders");
+            } else if (isGrosTarget) {
+                navigate("/gros");
+            } else {
+                navigate("/client/home");
             }
         } catch (error) {
             setMessageType("error");

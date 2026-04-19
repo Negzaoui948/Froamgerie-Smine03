@@ -9,6 +9,7 @@
 ### Backend environment variables
 
 - `MONGO_URL`
+- `CLIENT_URL` (URL du frontend Vercel, ex: `https://your-frontend-project.vercel.app`)
 - `JWT_SECRET`
 - `TOKEN_EXPIRE`
 - `STRIPE_SECRET_KEY`
