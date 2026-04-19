@@ -1,7 +1,9 @@
 import axios from "axios";
 
 export const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:3015";
+  process.env.REACT_APP_API_URL ||
+  process.env.REACT_APP_API_BASE_URL ||
+  "http://localhost:3015";
 
 // Configure axios defaults for all requests
 axios.defaults.baseURL = API_BASE_URL;

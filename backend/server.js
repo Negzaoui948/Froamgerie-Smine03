@@ -33,7 +33,7 @@ if (!process.env.VERCEL && process.env.NODE_ENV !== "production") {
 }
 
 // Connexion à MongoDB
-const mongo_url = process.env.MONGO_URL || config.get("mongo_url");
+const mongo_url = process.env.MONGO_URL || process.env.MONGODB_URI || config.get("mongo_url");
 mongoose.set("strictQuery", true);
 
 const connectToDatabase = async () => {
