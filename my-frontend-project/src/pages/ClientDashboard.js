@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { buildApiUrl } from "../config/api";
 import { resolveMediaUrl } from "../config/media";
 import "./ClientDashboard.css";
@@ -10,7 +10,6 @@ const categoryAccents = ["gold", "cream", "copper"];
 
 function ClientDashboard() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
   const [selectedCat, setSelectedCat] = useState(location.state?.selectedCategoryId || "");
